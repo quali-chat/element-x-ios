@@ -192,7 +192,19 @@ final class StartChatScreenCoordinator: CoordinatorProtocol {
         if let index = selectedUsers.firstIndex(where: { $0.userID == user.userID }) {
             selectedUsers.remove(at: index)
         } else {
+            #if QUALICHAT
+            let limit = parameters.appSettings.maxUsersToInviteWhenCreatingRoom
+            if selectedUsers.count >= limit {
+                // Inform the user and do not add more users beyond the limit.
+                parameters.userIndicatorController.alertInfo = AlertInfo(id: UUID(),
+                                                                         title: "Invite limit",
+                                                                         message: "You can select up to \(limit) people.")
+            } else {
+                selectedUsers.append(user)
+            }
+            #else
             selectedUsers.append(user)
+            #endif
         }
         self.selectedUsers.send(selectedUsers)
     }

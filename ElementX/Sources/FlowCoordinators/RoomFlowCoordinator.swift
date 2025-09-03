@@ -1391,7 +1391,20 @@ class RoomFlowCoordinator: FlowCoordinatorProtocol {
                 if let index = selectedUsers.firstIndex(where: { $0.userID == user.userID }) {
                     selectedUsers.remove(at: index)
                 } else {
+                    #if QUALICHAT
+                    let totalLimit = appSettings.maxUsersToInviteWhenCreatingRoom
+                    let existingCount = roomProxy.infoPublisher.value.activeMembersCount
+                    let remaining = max(0, totalLimit - existingCount)
+                    if selectedUsers.count >= remaining {
+                        userIndicatorController.alertInfo = AlertInfo(id: UUID(),
+                                                                      title: "Invite limit",
+                                                                      message: "You can select up to \(remaining) more people.")
+                    } else {
+                        selectedUsers.append(user)
+                    }
+                    #else
                     selectedUsers.append(user)
+                    #endif
                 }
                 
                 selectedUsersSubject.send(selectedUsers)

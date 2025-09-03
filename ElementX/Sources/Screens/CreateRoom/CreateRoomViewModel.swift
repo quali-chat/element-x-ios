@@ -73,13 +73,13 @@ class CreateRoomViewModel: CreateRoomViewModelType, CreateRoomViewModelProtocol 
             .store(in: &cancellables)
         
         setupBindings()
-#if QUALICHAT
+        #if QUALICHAT
         // Enforce private rooms only for QualiChat
         state.bindings.isRoomPrivate = true
         state.bindings.isKnockingOnly = false
         state.aliasLocalPart = roomAliasNameFromRoomDisplayName(roomName: state.roomName)
         syncNameAndAlias = true
-#endif
+        #endif
     }
     
     // MARK: - Public
@@ -195,14 +195,14 @@ class CreateRoomViewModel: CreateRoomViewModelType, CreateRoomViewModelProtocol 
     }
     
     private func updateParameters(state: CreateRoomViewState) {
-#if QUALICHAT
+        #if QUALICHAT
         // Force private room parameters for QualiChat
         createRoomParameters.name = state.roomName
         createRoomParameters.topic = state.bindings.roomTopic
         createRoomParameters.isRoomPrivate = true
         createRoomParameters.isKnockingOnly = false
         createRoomParameters.aliasLocalPart = nil
-#else
+        #else
         createRoomParameters.name = state.roomName
         createRoomParameters.topic = state.bindings.roomTopic
         createRoomParameters.isRoomPrivate = state.bindings.isRoomPrivate
@@ -212,7 +212,7 @@ class CreateRoomViewModel: CreateRoomViewModelType, CreateRoomViewModelProtocol 
         } else {
             createRoomParameters.aliasLocalPart = nil
         }
-#endif
+        #endif
     }
     
     private func createRoom() async {
@@ -224,7 +224,7 @@ class CreateRoomViewModel: CreateRoomViewModelType, CreateRoomViewModelProtocol 
         // Since the parameters are throttled, we need to make sure that the latest values are used
         updateParameters(state: state)
         
-#if !QUALICHAT
+        #if !QUALICHAT
         // Better to double check the errors also when trying to create the room
         if state.isKnockingFeatureEnabled, !createRoomParameters.isRoomPrivate {
             guard let canonicalAlias = String.makeCanonicalAlias(aliasLocalPart: createRoomParameters.aliasLocalPart,
@@ -245,7 +245,7 @@ class CreateRoomViewModel: CreateRoomViewModelType, CreateRoomViewModelProtocol 
                 return
             }
         }
-#endif
+        #endif
         
         let avatarURL: URL?
         if let media = createRoomParameters.avatarImageMedia {

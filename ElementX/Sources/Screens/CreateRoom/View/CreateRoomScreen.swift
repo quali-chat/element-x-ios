@@ -18,11 +18,11 @@ struct CreateRoomScreen: View {
         case alias
     }
     
-#if QUALICHAT
+    #if QUALICHAT
     private var disableVisibilityOptions: Bool { true }
-#else
+    #else
     private var disableVisibilityOptions: Bool { false }
-#endif
+    #endif
     
     private var aliasBinding: Binding<String> {
         .init(get: {

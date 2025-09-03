@@ -52,7 +52,11 @@ struct StartChatScreen: View {
         if context.viewState.isRoomDirectoryEnabled {
             roomDirectorySearch
         }
+        #if QUALICHAT
+        // Hidden for QualiChat builds
+        #else
         inviteFriendsSection
+        #endif
         joinRoomByAddressSection
         usersSection
     }

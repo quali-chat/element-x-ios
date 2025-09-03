@@ -335,6 +335,9 @@ final class AppSettings {
     
     /// Whether to hide the display name and avatar of ignored users as these may contain objectionable content.
     let hideIgnoredUserProfiles = true
+
+    /// The maximum number of users that can be selected when inviting people during room creation.
+    let maxUsersToInviteWhenCreatingRoom = 5
     
     // MARK: - Maps
     

@@ -73,7 +73,9 @@ struct UserDetailsEditScreen: View {
             ListRow(label: .plain(title: L10n.screenEditProfileDisplayNamePlaceholder),
                     kind: .textField(text: $context.name, axis: .horizontal))
                 .focused($focus)
+        #if QUALICHAT
                 .disabled(true)
+        #endif
         } header: {
             Text(L10n.screenEditProfileDisplayName)
                 .compoundListSectionHeader()

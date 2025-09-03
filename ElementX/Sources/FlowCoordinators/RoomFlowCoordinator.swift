@@ -1398,7 +1398,7 @@ class RoomFlowCoordinator: FlowCoordinatorProtocol {
                     if selectedUsers.count >= remaining {
                         userIndicatorController.alertInfo = AlertInfo(id: UUID(),
                                                                       title: "Invite limit",
-                                                                      message: "You can select up to \(remaining) more people.")
+                                                                      message: "You can select up to \(totalLimit) people.")
                     } else {
                         selectedUsers.append(user)
                     }

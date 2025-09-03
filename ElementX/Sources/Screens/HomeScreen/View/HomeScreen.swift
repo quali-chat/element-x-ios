@@ -21,8 +21,22 @@ struct HomeScreen: View {
             .alert(item: $context.leaveRoomAlertItem,
                    actions: leaveRoomAlertActions,
                    message: leaveRoomAlertMessage)
+        #if QUALICHAT
+            .navigationTitle(L10n.screenRoomlistMainSpaceTitle)
+            .toolbar {
+                toolbar
+                ToolbarItem(placement: .principal) {
+                    Image("quali")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 24)
+                        .accessibilityHidden(true)
+                }
+            }
+        #else
             .navigationTitle(L10n.screenRoomlistMainSpaceTitle)
             .toolbar { toolbar }
+        #endif
             .background(Color.compound.bgCanvasDefault.ignoresSafeArea())
             .track(screen: .Home)
             .bloom()

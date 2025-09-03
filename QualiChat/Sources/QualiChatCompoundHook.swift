@@ -12,9 +12,9 @@ import UIKit
 struct QualiChatCompoundHook: CompoundHookProtocol {
     func override(colors: CompoundColors, uiColors: CompoundUIColors) {
         let brand = Color(red: 0.608, green: 0.686, blue: 0.969)
-        // let brandUI = UIColor(red: 0.608, green: 0.686, blue: 0.969, alpha: 1.0)
         
         colors.override(\.iconAccentTertiary, with: brand)
+        colors.override(\.textActionAccent, with: brand)
         colors.override(\.bgDecorative1, with: Color(red: 0.502, green: 0.831, blue: 0.871))
         colors.override(\.textDecorative1, with: Color(red: 0.102, green: 0.102, blue: 0.102))
 

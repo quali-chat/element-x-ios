@@ -18,6 +18,12 @@ struct CreateRoomScreen: View {
         case alias
     }
     
+#if QUALICHAT
+    private var disableVisibilityOptions: Bool { true }
+#else
+    private var disableVisibilityOptions: Bool { false }
+#endif
+    
     private var aliasBinding: Binding<String> {
         .init(get: {
             context.viewState.aliasLocalPart
@@ -175,6 +181,7 @@ struct CreateRoomScreen: View {
             Text(L10n.screenCreateRoomRoomVisibilitySectionTitle)
                 .compoundListSectionHeader()
         }
+        .disabled(disableVisibilityOptions)
     }
     
     private var roomAccessSection: some View {

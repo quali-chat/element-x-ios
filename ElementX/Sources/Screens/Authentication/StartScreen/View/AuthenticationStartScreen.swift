@@ -34,31 +34,43 @@ struct AuthenticationStartScreen: View {
                     .frame(height: UIConstants.spacerHeight(in: geometry))
             }
             .frame(maxHeight: .infinity)
-            .safeAreaInset(edge: .bottom) {
-                versionText
-                    .font(.compound.bodySM)
-                    .foregroundColor(.compound.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom)
-                    .onTapGesture(count: 7) {
-                        context.send(viewAction: .reportProblem)
-                    }
-                    .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.appVersion)
-            }
+            #if !QUALICHAT
+                .safeAreaInset(edge: .bottom) {
+                    versionText
+                        .font(.compound.bodySM)
+                        .foregroundColor(.compound.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom)
+                        .onTapGesture(count: 7) {
+                            context.send(viewAction: .reportProblem)
+                        }
+                        .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.appVersion)
+                }
+            #endif
         }
         .navigationBarHidden(true)
-        .background {
-            AuthenticationStartScreenBackgroundImage()
-        }
-        .introspect(.window, on: .supportedVersions) { window in
-            context.send(viewAction: .updateWindow(window))
-        }
+        #if QUALICHAT
+            .background()
+            .backgroundStyle(.compound.bgCanvasDefault)
+        #else
+            .background {
+                AuthenticationStartScreenBackgroundImage()
+            }
+        #endif
+            .introspect(.window, on: .supportedVersions) { window in
+                context.send(viewAction: .updateWindow(window))
+            }
     }
     
     var content: some View {
         VStack(spacing: 0) {
             Spacer()
             
+            #if QUALICHAT
+            QualiOnboardingSlidesView()
+                .padding()
+                .fixedSize(horizontal: false, vertical: true)
+            #else
             if verticalSizeClass == .regular {
                 Spacer()
                 
@@ -79,6 +91,7 @@ struct AuthenticationStartScreen: View {
             }
             .padding()
             .fixedSize(horizontal: false, vertical: true)
+            #endif
             
             Spacer()
         }
@@ -90,6 +103,7 @@ struct AuthenticationStartScreen: View {
     /// The main action buttons.
     var buttons: some View {
         VStack(spacing: 16) {
+            #if !QUALICHAT
             if context.viewState.showQRCodeLoginButton {
                 Button { context.send(viewAction: .loginWithQR) } label: {
                     Label(L10n.screenOnboardingSignInWithQrCode, icon: \.qrCode)
@@ -97,6 +111,7 @@ struct AuthenticationStartScreen: View {
                 .buttonStyle(.compound(.primary))
                 .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.signInWithQr)
             }
+            #endif
             
             #if QUALICHAT
             Button { context.send(viewAction: .loginWithWallet) } label: {
@@ -151,3 +166,58 @@ struct AuthenticationStartScreen_Previews: PreviewProvider, TestablePreview {
                                            userIndicatorController: UserIndicatorControllerMock())
     }
 }
+
+#if QUALICHAT
+
+// MARK: - QualiChat Onboarding Slides
+
+private struct QualiOnboardingSlide: Identifiable {
+    let id = UUID()
+    let imageName: String
+    let title: String
+    let subtitle: String
+}
+
+private struct QualiOnboardingSlidesView: View {
+    private let slides: [QualiOnboardingSlide] = [
+        .init(imageName: "images/onboarding-1",
+              title: "Enter your exclusive token-gated chats",
+              subtitle: "All communities of the tokens you own instantly in one chat & collaboration dApp."),
+        .init(imageName: "images/onboarding-2",
+              title: "Secure Wallet-to-wallet messaging",
+              subtitle: "Decentalized, end-to-end encrypted communication for ultimate privacy."),
+        .init(imageName: "images/onboarding-3",
+              title: "Name service identity control",
+              subtitle: "If you own a Name Service domain, your display name is automatically set to it.")
+    ]
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            TabView {
+                ForEach(slides) { slide in
+                    VStack(spacing: 16) {
+                        Image(slide.imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 250)
+                            .accessibilityHidden(true)
+                        Text(slide.title.uppercased())
+                            .font(.compound.headingLGBold)
+                            .foregroundColor(.compound.textActionAccent)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                        Text(slide.subtitle)
+                            .font(.compound.bodyLG)
+                            .foregroundColor(.compound.textPrimary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .frame(maxWidth: .infinity, minHeight: 500)
+        }
+    }
+}
+#endif

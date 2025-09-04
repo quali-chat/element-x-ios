@@ -272,6 +272,8 @@ class AuthenticationFlowCoordinator: FlowCoordinatorProtocol {
                 switch action {
                 case .loginWithQR:
                     stateMachine.tryEvent(.loginWithQR)
+                case .loginWithWallet:
+                    MXLog.info("Login with Wallet tapped")
                 case .login:
                     stateMachine.tryEvent(.confirmServer(.login))
                 case .register:

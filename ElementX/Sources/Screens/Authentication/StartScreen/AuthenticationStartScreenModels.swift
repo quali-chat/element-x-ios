@@ -14,6 +14,7 @@ enum AuthenticationStartScreenCoordinatorAction {
     case login
     case register
     case reportProblem
+    case loginWithWallet
     
     case loginDirectlyWithOIDC(data: OIDCAuthorizationDataProxy, window: UIWindow)
     case loginDirectlyWithPassword(loginHint: String?)
@@ -24,6 +25,7 @@ enum AuthenticationStartScreenViewModelAction: Equatable {
     case login
     case register
     case reportProblem
+    case loginWithWallet
     
     case loginDirectlyWithOIDC(data: OIDCAuthorizationDataProxy, window: UIWindow)
     case loginDirectlyWithPassword(loginHint: String?)
@@ -66,4 +68,5 @@ enum AuthenticationStartScreenViewAction {
     case login
     case register
     case reportProblem
+    case loginWithWallet
 }

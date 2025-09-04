@@ -65,6 +65,8 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
             state.window = window
         case .loginWithQR:
             actionsSubject.send(.loginWithQR)
+        case .loginWithWallet:
+            actionsSubject.send(.loginWithWallet)
         case .login:
             Task { await login() }
         case .register:

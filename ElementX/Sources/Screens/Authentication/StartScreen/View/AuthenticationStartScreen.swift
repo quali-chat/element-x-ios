@@ -98,6 +98,14 @@ struct AuthenticationStartScreen: View {
                 .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.signInWithQr)
             }
             
+            #if QUALICHAT
+            Button { context.send(viewAction: .loginWithWallet) } label: {
+                Text("Login with Wallet")
+            }
+            .buttonStyle(.compound(.primary))
+            .accessibilityIdentifier("signInWithWallet")
+            #endif
+            
             Button { context.send(viewAction: .login) } label: {
                 Text(context.viewState.loginButtonTitle)
             }

@@ -117,6 +117,11 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         
         Self.setupServiceLocator(appSettings: appSettings, appHooks: appHooks)
         Self.setupSentry(appSettings: appSettings)
+
+        #if QUALICHAT
+        WalletAuthService.configure(appDisplayName: InfoPlistReader.main.bundleDisplayName,
+                                    baseBundleIdentifier: InfoPlistReader.main.baseBundleIdentifier)
+        #endif
         
         ServiceLocator.shared.analytics.signpost.start()
         ServiceLocator.shared.analytics.startIfEnabled()

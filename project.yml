@@ -62,7 +62,7 @@ include:
 - path: NSE/SupportingFiles/target.yml
 - path: ShareExtension/SupportingFiles/target.yml
 - path: AccessibilityTests/SupportingFiles/target.yml
-- path: QualiChat/SupportingFiles/target.yml
+- path: QualiChat/SupportingFiles/quali-chat-target.yml
 # - path: MyAppVariant/override.yml
 
 packages:
@@ -153,6 +153,18 @@ packages:
   Version:
     url: https://github.com/mxcl/Version
     minorVersion: 2.2.0
+  ReownSwift:
+    url: https://github.com/reown-com/reown-swift
+    from: 1.0.0
+  Starscream:
+    url: https://github.com/daltoniam/Starscream
+    from: 3.1.2
+  CryptoSwift:
+    url: https://github.com/krzyzanowskim/CryptoSwift
+    from: 1.7.1
+  Web3:
+    url: https://github.com/Boilertalk/Web3.swift
+    from: 0.8.8
 
 aggregateTargets:
   Periphery:

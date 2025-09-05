@@ -273,7 +273,9 @@ class AuthenticationFlowCoordinator: FlowCoordinatorProtocol {
                 case .loginWithQR:
                     stateMachine.tryEvent(.loginWithQR)
                 case .loginWithWallet:
-                    MXLog.info("Login with Wallet tapped")
+                    #if QUALICHAT
+                    WalletAuthService.present()
+                    #endif
                 case .login:
                     stateMachine.tryEvent(.confirmServer(.login))
                 case .register:

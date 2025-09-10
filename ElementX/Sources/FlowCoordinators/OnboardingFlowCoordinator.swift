@@ -137,7 +137,12 @@ class OnboardingFlowCoordinator: FlowCoordinatorProtocol {
     }
     
     private var requiresAnalyticsSetup: Bool {
-        analyticsService.shouldShowAnalyticsPrompt
+        #if QUALICHAT
+        // For QualiChat, skip the analytics opt-in prompt ("Help improve quali.chat").
+        return false
+        #else
+        return analyticsService.shouldShowAnalyticsPrompt
+        #endif
     }
     
     private var requiresNotificationsSetup: Bool {

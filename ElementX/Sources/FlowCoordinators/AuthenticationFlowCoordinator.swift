@@ -234,7 +234,8 @@ class AuthenticationFlowCoordinator: FlowCoordinatorProtocol {
         
         stateMachine.addRoutes(event: .signedIn, transitions: [.qrCodeLoginScreen => .complete,
                                                                .oidcAuthentication => .complete,
-                                                               .loginScreen => .complete]) { [weak self] context in
+                                                               .loginScreen => .complete,
+                                                               .startScreen => .complete]) { [weak self] context in
             guard let userSession = context.userInfo as? UserSessionProtocol else { fatalError("The user session wasn't included in the context") }
             self?.userHasSignedIn(userSession: userSession)
         }
@@ -272,10 +273,12 @@ class AuthenticationFlowCoordinator: FlowCoordinatorProtocol {
                 switch action {
                 case .loginWithQR:
                     stateMachine.tryEvent(.loginWithQR)
+                #if QUALICHAT
                 case .loginWithWallet:
-                    #if QUALICHAT
-                    WalletAuthService.present()
-                    #endif
+                    WalletAuthService.shared.present()
+                case .signedIn(let userSession):
+                    stateMachine.tryEvent(.signedIn, userInfo: userSession)
+                #endif
                 case .login:
                     stateMachine.tryEvent(.confirmServer(.login))
                 case .register:

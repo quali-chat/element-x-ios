@@ -119,8 +119,8 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         Self.setupSentry(appSettings: appSettings)
 
         #if QUALICHAT
-        WalletAuthService.configure(appDisplayName: InfoPlistReader.main.bundleDisplayName,
-                                    baseBundleIdentifier: InfoPlistReader.main.baseBundleIdentifier)
+        WalletAuthService.shared.configure(appDisplayName: InfoPlistReader.main.bundleDisplayName,
+                                           baseBundleIdentifier: InfoPlistReader.main.baseBundleIdentifier)
         #endif
         
         ServiceLocator.shared.analytics.signpost.start()
@@ -1024,7 +1024,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
     private func startSync() {
         guard let userSession else { return }
         
-        let serverName = String(userSession.clientProxy.userIDServerName ?? "Unknown")
+        let serverName = userSession.clientProxy.userIDServerName ?? "Unknown"
         
         ServiceLocator.shared.analytics.signpost.beginFirstSync(serverName: serverName)
         userSession.clientProxy.startSync()

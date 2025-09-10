@@ -18,9 +18,11 @@ enum AuthenticationStartScreenCoordinatorAction {
     
     case loginDirectlyWithOIDC(data: OIDCAuthorizationDataProxy, window: UIWindow)
     case loginDirectlyWithPassword(loginHint: String?)
+    
+    case signedIn(UserSessionProtocol)
 }
 
-enum AuthenticationStartScreenViewModelAction: Equatable {
+enum AuthenticationStartScreenViewModelAction {
     case loginWithQR
     case login
     case register
@@ -29,6 +31,8 @@ enum AuthenticationStartScreenViewModelAction: Equatable {
     
     case loginDirectlyWithOIDC(data: OIDCAuthorizationDataProxy, window: UIWindow)
     case loginDirectlyWithPassword(loginHint: String?)
+    
+    case signedIn(UserSessionProtocol)
 }
 
 struct AuthenticationStartScreenViewState: BindableState {

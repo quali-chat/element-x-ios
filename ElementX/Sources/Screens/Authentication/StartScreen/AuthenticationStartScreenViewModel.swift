@@ -6,6 +6,7 @@
 //
 
 import Combine
+import ReownAppKit
 import SwiftUI
 
 typealias AuthenticationStartScreenViewModelType = StateStoreViewModelV2<AuthenticationStartScreenViewState, AuthenticationStartScreenViewAction>
@@ -15,6 +16,9 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
     private let provisioningParameters: AccountProvisioningParameters?
     private let appSettings: AppSettings
     private let userIndicatorController: UserIndicatorControllerProtocol
+    
+    private var pendingWalletAddress: String?
+    private var pendingWalletNonce: String?
     
     private let canReportProblem: Bool
     
@@ -56,6 +60,28 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
         }
         
         super.init(initialViewState: initialViewState)
+        
+        AppKit.instance.sessionSettlePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.startLoading()
+                Task { await self?.beginWalletAuthFlow() }
+            }
+            .store(in: &cancellables)
+        
+        AppKit.instance.sessionResponsePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] response in
+                switch response.result {
+                case let .response(value):
+                    let signature = value.stringRepresentation.replacingOccurrences(of: "\"", with: "")
+                    self?.completeWalletLogin(with: signature)
+                case let .error(error):
+                    self?.stopLoading()
+                    print(error)
+                }
+            }
+            .store(in: &cancellables)
     }
 
     override func process(viewAction: AuthenticationStartScreenViewAction) {
@@ -66,7 +92,8 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
         case .loginWithQR:
             actionsSubject.send(.loginWithQR)
         case .loginWithWallet:
-            actionsSubject.send(.loginWithWallet)
+            presentWalletLogin()
+        // actionsSubject.send(.loginWithWallet)
         case .login:
             Task { await login() }
         case .register:
@@ -131,5 +158,61 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
     
     private func displayError() {
         state.bindings.alertInfo = AlertInfo(id: .genericError)
+    }
+    
+    private func presentWalletLogin() {
+        WalletAuthService.shared.present()
+    }
+    
+    private func beginWalletAuthFlow() async {
+        guard let address = AppKit.instance.getAddress() else {
+            await MainActor.run {
+                stopLoading()
+                displayError()
+            }
+            return
+        }
+        pendingWalletAddress = address
+        switch await authenticationService.requestWalletNonce(for: address) {
+        case .success(let nonce):
+            pendingWalletNonce = nonce
+            let message = "Login to quali.chat\n\nAddress: \(address.lowercased())\nNonce: \(nonce)"
+            await WalletAuthService.shared.requestPersonalSignWithDelay(message: message)
+        case .failure:
+            await MainActor.run {
+                stopLoading()
+                displayError()
+            }
+        }
+    }
+    
+    private func completeWalletLogin(with signature: String) {
+        guard let address = pendingWalletAddress, let nonce = pendingWalletNonce else {
+            stopLoading()
+            displayError()
+            return
+        }
+        pendingWalletAddress = nil
+        pendingWalletNonce = nil
+        startLoading()
+        Task {
+            guard case .success = await authenticationService.configure(for: appSettings.accountProviders.first ?? "example.com", flow: .login) else {
+                stopLoading()
+                displayError()
+                return
+            }
+            switch await authenticationService.loginWithWallet(address: address,
+                                                               nonce: nonce,
+                                                               signature: signature,
+                                                               initialDeviceName: UIDevice.current.initialDeviceName,
+                                                               deviceID: nil) {
+            case .success(let userSession):
+                actionsSubject.send(.signedIn(userSession))
+                stopLoading()
+            case .failure:
+                stopLoading()
+                displayError()
+            }
+        }
     }
 }

@@ -19,6 +19,8 @@ class AuthenticationService: AuthenticationServiceProtocol {
     private let appSettings: AppSettings
     private let appHooks: AppHooks
     
+    private let qualiChatApi: QualiChatApiProtocol
+    
     private let homeserverSubject: CurrentValueSubject<LoginHomeserver, Never>
     var homeserver: CurrentValuePublisher<LoginHomeserver, Never> { homeserverSubject.asCurrentValuePublisher() }
     private(set) var flow: AuthenticationFlow
@@ -39,6 +41,8 @@ class AuthenticationService: AuthenticationServiceProtocol {
         self.userSessionStore = userSessionStore
         self.appSettings = appSettings
         self.appHooks = appHooks
+        
+        qualiChatApi = QualiChatApi(appSettings: appSettings)
         
         // When updating these, don't forget to update the reset method too.
         homeserverSubject = .init(LoginHomeserver(address: appSettings.accountProviders[0], loginMode: .unknown))
@@ -146,6 +150,53 @@ class AuthenticationService: AuthenticationServiceProtocol {
             default:
                 return .failure(.failedLoggingIn)
             }
+        } catch {
+            MXLog.error("Failed logging in with error: \(error)")
+            return .failure(.failedLoggingIn)
+        }
+    }
+    
+    func requestWalletNonce(for address: String) async -> Result<String, AuthenticationServiceError> {
+        do {
+            let result = try await qualiChatApi.authApi.nonce(address: address)
+            switch result {
+            case .success(let nonce):
+                return .success(nonce)
+            case .failure:
+                return .failure(.failedLoggingIn)
+            }
+        } catch {
+            return .failure(.failedLoggingIn)
+        }
+    }
+    
+    func loginWithWallet(address: String, nonce: String, signature: String, initialDeviceName: String?, deviceID: String?) async -> Result<UserSessionProtocol, AuthenticationServiceError> {
+        guard let client else { return .failure(.failedLoggingIn) }
+        do {
+            let verifyResult = try await qualiChatApi.authApi.verify(address: address, nonce: nonce, signature: signature)
+            let tempToken: String
+            switch verifyResult {
+            case .success(let token):
+                tempToken = token
+            case .failure:
+                return .failure(.failedLoggingIn)
+            }
+            let ssoResult = try await qualiChatApi.authApi.sso(token: tempToken)
+            let matrixJwt: String
+            switch ssoResult {
+            case .success(let jwt):
+                matrixJwt = jwt
+            case .failure:
+                return .failure(.failedLoggingIn)
+            }
+            try await client.customLoginWithJwt(jwt: matrixJwt, initialDeviceName: initialDeviceName, deviceId: deviceID)
+            let refreshToken = try? client.session().refreshToken
+            if refreshToken != nil {
+                MXLog.warning("Empty refresh token")
+                _ = try? await client.logout()
+                return .failure(.sessionTokenRefreshNotSupported)
+            }
+            return await userSession(for: client)
         } catch {
             MXLog.error("Failed logging in with error: \(error)")
             return .failure(.failedLoggingIn)

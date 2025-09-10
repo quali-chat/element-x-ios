@@ -56,7 +56,7 @@ class LoginScreenViewModel: LoginScreenViewModelType, LoginScreenViewModelProtoc
             login()
         }
     }
-    
+
     func stopLoading() {
         state.isLoading = false
         userIndicatorController.retractIndicatorWithId(Self.loadingIndicatorIdentifier)

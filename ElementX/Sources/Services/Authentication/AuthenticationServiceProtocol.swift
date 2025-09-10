@@ -53,6 +53,10 @@ protocol AuthenticationServiceProtocol: QRCodeLoginServiceProtocol {
     func loginWithOIDCCallback(_ callbackURL: URL) async -> Result<UserSessionProtocol, AuthenticationServiceError>
     /// Performs a password login using the current homeserver.
     func login(username: String, password: String, initialDeviceName: String?, deviceID: String?) async -> Result<UserSessionProtocol, AuthenticationServiceError>
+    /// Requests a backend nonce for a wallet address.
+    func requestWalletNonce(for address: String) async -> Result<String, AuthenticationServiceError>
+    /// Performs wallet login: verify signature, exchange for Matrix JWT and log in.
+    func loginWithWallet(address: String, nonce: String, signature: String, initialDeviceName: String?, deviceID: String?) async -> Result<UserSessionProtocol, AuthenticationServiceError>
     
     /// Resets the current configuration requiring `configure(for:flow:)` to be called again.
     func reset()

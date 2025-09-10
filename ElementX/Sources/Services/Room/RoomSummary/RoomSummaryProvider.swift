@@ -89,7 +89,7 @@ class RoomSummaryProvider: RoomSummaryProviderProtocol {
         self.roomList = roomList
         
         do {
-            listUpdatesSubscriptionResult = roomList.entriesWithDynamicAdapters(pageSize: UInt32(roomListPageSize), listener: SDKListener { [weak self] updates in
+            listUpdatesSubscriptionResult = roomList.entriesWithDynamicAdapters(pageSize: try! UInt32(roomListPageSize), listener: SDKListener { [weak self] updates in
                 guard let self else { return }
                 diffsPublisher.send(updates)
             })

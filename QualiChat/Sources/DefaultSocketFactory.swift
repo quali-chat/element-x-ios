@@ -9,12 +9,14 @@ import Foundation
 import Starscream
 import WalletConnectRelay
 
-extension WebSocket: WebSocketConnecting { }
+extension WebSocket: @retroactive WebSocketConnecting { }
 
 struct DefaultSocketFactory: WebSocketFactory {
     func create(with url: URL) -> WebSocketConnecting {
         let socket = WebSocket(url: url)
-        let queue = DispatchQueue(label: "com.walletconnect.sdk.sockets", qos: .utility, attributes: .concurrent)
+        let queue = DispatchQueue(label: "com.walletconnect.sdk.sockets",
+                                  qos: .utility,
+                                  attributes: .concurrent)
         socket.callbackQueue = queue
         return socket
     }

@@ -203,6 +203,55 @@ class AuthenticationService: AuthenticationServiceProtocol {
         }
     }
     
+    // MARK: - Aeternity (Superhero)
+    
+    func requestAeternityNonce(for address: String) async -> Result<String, AuthenticationServiceError> {
+        do {
+            let result = try await qualiChatApi.authApi.aeNonce(address: address)
+            switch result {
+            case .success(let nonce):
+                return .success(nonce)
+            case .failure:
+                return .failure(.failedLoggingIn)
+            }
+        } catch {
+            return .failure(.failedLoggingIn)
+        }
+    }
+    
+    func loginWithAeternity(address: String, nonce: String, signature: String, initialDeviceName: String?, deviceID: String?) async -> Result<UserSessionProtocol, AuthenticationServiceError> {
+        guard let client else { return .failure(.failedLoggingIn) }
+        do {
+            let verifyResult = try await qualiChatApi.authApi.aeVerify(address: address, nonce: nonce, signature: signature)
+            let tempToken: String
+            switch verifyResult {
+            case .success(let token):
+                tempToken = token
+            case .failure:
+                return .failure(.failedLoggingIn)
+            }
+            let ssoResult = try await qualiChatApi.authApi.sso(token: tempToken)
+            let matrixJwt: String
+            switch ssoResult {
+            case .success(let jwt):
+                matrixJwt = jwt
+            case .failure:
+                return .failure(.failedLoggingIn)
+            }
+            try await client.customLoginWithJwt(jwt: matrixJwt, initialDeviceName: initialDeviceName, deviceId: deviceID)
+            let refreshToken = try? client.session().refreshToken
+            if refreshToken != nil {
+                MXLog.warning("Empty refresh token")
+                _ = try? await client.logout()
+                return .failure(.sessionTokenRefreshNotSupported)
+            }
+            return await userSession(for: client)
+        } catch {
+            MXLog.error("Failed logging in with error: \(error)")
+            return .failure(.failedLoggingIn)
+        }
+    }
+    
     func loginWithQRCode(data: Data) async -> Result<UserSessionProtocol, AuthenticationServiceError> {
         let qrData: QrCodeData
         do {

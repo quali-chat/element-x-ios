@@ -58,6 +58,11 @@ protocol AuthenticationServiceProtocol: QRCodeLoginServiceProtocol {
     /// Performs wallet login: verify signature, exchange for Matrix JWT and log in.
     func loginWithWallet(address: String, nonce: String, signature: String, initialDeviceName: String?, deviceID: String?) async -> Result<UserSessionProtocol, AuthenticationServiceError>
     
+    /// Requests a backend nonce for an Aeternity wallet address.
+    func requestAeternityNonce(for address: String) async -> Result<String, AuthenticationServiceError>
+    /// Performs Aeternity (Superhero) wallet login.
+    func loginWithAeternity(address: String, nonce: String, signature: String, initialDeviceName: String?, deviceID: String?) async -> Result<UserSessionProtocol, AuthenticationServiceError>
+    
     /// Resets the current configuration requiring `configure(for:flow:)` to be called again.
     func reset()
 }

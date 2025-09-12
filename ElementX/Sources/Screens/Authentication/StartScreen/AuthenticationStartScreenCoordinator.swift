@@ -45,6 +45,8 @@ final class AuthenticationStartScreenCoordinator: CoordinatorProtocol {
                     actionsSubject.send(.loginWithQR)
                 case .loginWithWallet:
                     actionsSubject.send(.loginWithWallet)
+                case .loginWithAeternity:
+                    actionsSubject.send(.loginWithAeternity)
                 case .login:
                     actionsSubject.send(.login)
                 case .register:
@@ -58,6 +60,10 @@ final class AuthenticationStartScreenCoordinator: CoordinatorProtocol {
                     actionsSubject.send(.loginDirectlyWithPassword(loginHint: loginHint))
                 case .signedIn(let userSession):
                     actionsSubject.send(.signedIn(userSession))
+                case .submitAeternityAddress:
+                    break
+                case .submitAeternitySignature:
+                    break
                 }
             }
             .store(in: &cancellables)

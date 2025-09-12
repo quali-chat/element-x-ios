@@ -11,6 +11,9 @@ protocol QualiChatAuthApiProtocol {
     func nonce(address: String) async throws -> Result<String, Error>
     func verify(address: String, nonce: String, signature: String) async throws -> Result<String, Error>
     func sso(token: String) async throws -> Result<String, Error>
+    // Aeternity (Superhero) endpoints
+    func aeNonce(address: String) async throws -> Result<String, Error>
+    func aeVerify(address: String, nonce: String, signature: String) async throws -> Result<String, Error>
 }
 
 class QualiChatAuthApi: QualiChatAuthApiProtocol {
@@ -35,6 +38,30 @@ class QualiChatAuthApi: QualiChatAuthApiProtocol {
         do {
             let requestBody = VerifyRequest(address: address, nonce: nonce, signature: signature)
             let data = try await postJSON(to: "auth/verify", payload: requestBody)
+            let response = try decodeJSON(VerifyResponse.self, from: data)
+            return .success(response.token)
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    // MARK: - Aeternity (Superhero)
+    
+    func aeNonce(address: String) async throws -> (Result<String, Error>) {
+        do {
+            let requestBody = NonceRequest(address: address)
+            let data = try await postJSON(to: "auth/ae/nonce", payload: requestBody)
+            let response = try decodeJSON(NonceResponse.self, from: data)
+            return .success(response.nonce)
+        } catch {
+            return .failure(error)
+        }
+    }
+    
+    func aeVerify(address: String, nonce: String, signature: String) async throws -> (Result<String, Error>) {
+        do {
+            let requestBody = VerifyRequest(address: address, nonce: nonce, signature: signature)
+            let data = try await postJSON(to: "auth/ae/verify", payload: requestBody)
             let response = try decodeJSON(VerifyResponse.self, from: data)
             return .success(response.token)
         } catch {

@@ -12,14 +12,11 @@ import Web3
 
 struct DefaultCryptoProvider: CryptoProvider {
     func recoverPubKey(signature: EthereumSignature, message: Data)
-        throws -> Data
-    {
-        let publicKey = try EthereumPublicKey(
-            message: message.makeBytes(),
-            v: EthereumQuantity(quantity: BigUInt(signature.v)),
-            r: EthereumQuantity(signature.r),
-            s: EthereumQuantity(signature.s)
-        )
+        throws -> Data {
+        let publicKey = try EthereumPublicKey(message: message.makeBytes(),
+                                              v: EthereumQuantity(quantity: BigUInt(signature.v)),
+                                              r: EthereumQuantity(signature.r),
+                                              s: EthereumQuantity(signature.s))
         return Data(publicKey.rawPublicKey)
     }
 

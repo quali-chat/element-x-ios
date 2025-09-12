@@ -276,6 +276,8 @@ class AuthenticationFlowCoordinator: FlowCoordinatorProtocol {
                 #if QUALICHAT
                 case .loginWithWallet:
                     WalletAuthService.shared.present()
+                case .loginWithAeternity:
+                    SuperheroAuthService.shared.openConnect()
                 case .signedIn(let userSession):
                     stateMachine.tryEvent(.signedIn, userInfo: userSession)
                 #endif

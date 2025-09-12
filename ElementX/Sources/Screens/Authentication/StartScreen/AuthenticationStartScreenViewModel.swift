@@ -82,6 +82,26 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
                 }
             }
             .store(in: &cancellables)
+
+        // Superhero callbacks
+        SuperheroAuthService.shared.events
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] event in
+                guard let self else { return }
+                switch event {
+                case .connected(let address, _):
+                    self.pendingWalletAddress = address
+                    Task { await self.beginAeternityAuthFlow() }
+                case .signed(let address, let signature):
+                    self.state.bindings.aeSignature = signature
+                    self.pendingWalletAddress = address
+                    self.completeAeternityLogin()
+                case .error:
+                    self.stopLoading()
+                    self.displayError()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     override func process(viewAction: AuthenticationStartScreenViewAction) {
@@ -94,6 +114,12 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
         case .loginWithWallet:
             presentWalletLogin()
         // actionsSubject.send(.loginWithWallet)
+        case .loginWithAeternity:
+            SuperheroAuthService.shared.openConnect()
+        case .submitAeternityAddress:
+            Task { await beginAeternityAuthFlow() }
+        case .submitAeternitySignature:
+            completeAeternityLogin()
         case .login:
             Task { await login() }
         case .register:
@@ -164,6 +190,65 @@ class AuthenticationStartScreenViewModel: AuthenticationStartScreenViewModelType
         WalletAuthService.shared.present()
     }
     
+    // MARK: - Aeternity (Superhero)
+
+    private func beginAeternityAuthFlow() async {
+        let address = pendingWalletAddress ?? state.bindings.aeAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard address.hasPrefix("ak_") else {
+            await MainActor.run { displayError() }
+            return
+        }
+        startLoading()
+        switch await authenticationService.requestAeternityNonce(for: address) {
+        case .success(let nonce):
+            pendingWalletAddress = address
+            pendingWalletNonce = nonce
+            let message = "Login to quali.chat\n\nAddress: \(address)\nNonce: \(nonce)"
+            // Trigger sign deeplink
+            SuperheroAuthService.shared.openSign(message: message, address: address)
+            stopLoading()
+        case .failure:
+            await MainActor.run {
+                stopLoading()
+                displayError()
+            }
+        }
+    }
+    
+    private func completeAeternityLogin() {
+        guard let address = pendingWalletAddress, let nonce = pendingWalletNonce else {
+            stopLoading()
+            displayError()
+            return
+        }
+        let signature = state.bindings.aeSignature.trimmingCharacters(in: .whitespacesAndNewlines)
+        pendingWalletAddress = nil
+        pendingWalletNonce = nil
+        startLoading()
+        Task {
+            guard case .success = await authenticationService.configure(for: appSettings.accountProviders.first ?? "example.com", flow: .login) else {
+                stopLoading()
+                displayError()
+                return
+            }
+            switch await authenticationService.loginWithAeternity(address: address,
+                                                                  nonce: nonce,
+                                                                  signature: signature,
+                                                                  initialDeviceName: UIDevice.current.initialDeviceName,
+                                                                  deviceID: nil) {
+            case .success(let userSession):
+                actionsSubject.send(.signedIn(userSession))
+                await MainActor.run {
+                    state.bindings.aeShowSignatureSheet = false
+                }
+                stopLoading()
+            case .failure:
+                stopLoading()
+                displayError()
+            }
+        }
+    }
+
     private func beginWalletAuthFlow() async {
         guard let address = AppKit.instance.getAddress() else {
             await MainActor.run {

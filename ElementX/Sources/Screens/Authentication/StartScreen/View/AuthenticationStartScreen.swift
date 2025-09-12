@@ -115,17 +115,22 @@ struct AuthenticationStartScreen: View {
             
             #if QUALICHAT
             Button { context.send(viewAction: .loginWithWallet) } label: {
-                Text("Login with Wallet")
+                Text("Connect with Ethereum Wallet")
             }
             .buttonStyle(.compound(.primary))
             .accessibilityIdentifier("signInWithWallet")
-            #endif
-            
-            Button { context.send(viewAction: .login) } label: {
-                Text(context.viewState.loginButtonTitle)
+            Button { context.send(viewAction: .loginWithAeternity) } label: {
+                Text("Connect with Superhero Wallet")
             }
             .buttonStyle(.compound(.primary))
-            .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.signIn)
+            .accessibilityIdentifier("signInWithSuperhero")
+            #endif
+            
+            /* Button { context.send(viewAction: .login) } label: {
+                 Text(context.viewState.loginButtonTitle)
+             }
+             .buttonStyle(.compound(.primary))
+             .accessibilityIdentifier(A11yIdentifiers.authenticationStartScreen.signIn)*/
             
             if context.viewState.showCreateAccountButton {
                 Button { context.send(viewAction: .register) } label: {
@@ -136,6 +141,7 @@ struct AuthenticationStartScreen: View {
         }
         .padding(.horizontal, verticalSizeClass == .compact ? 128 : 24)
         .readableFrame()
+        // No textviews needed when using deep links
     }
     
     var versionText: Text {
@@ -195,7 +201,7 @@ private struct QualiOnboardingSlidesView: View {
         VStack(spacing: 0) {
             TabView {
                 ForEach(slides) { slide in
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         Image(slide.imageName)
                             .resizable()
                             .scaledToFit()
@@ -216,7 +222,7 @@ private struct QualiOnboardingSlidesView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .automatic))
-            .frame(maxWidth: .infinity, minHeight: 500)
+            .frame(maxWidth: .infinity, minHeight: 540)
         }
     }
 }

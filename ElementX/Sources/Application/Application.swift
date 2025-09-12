@@ -46,7 +46,10 @@ struct Application: App {
                     return .systemAction
                 })
                 .onOpenURL { url in
-                    openURL(url, isExternalURL: true)
+                    // First attempt to handle Superhero callbacks
+                    if SuperheroAuthService.shared.handleCallback(url: url) == false {
+                        openURL(url, isExternalURL: true)
+                    }
                 }
                 .onContinueUserActivity("INStartVideoCallIntent") { userActivity in
                     // `INStartVideoCallIntent` is to be replaced with `INStartCallIntent`

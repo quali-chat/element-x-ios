@@ -15,6 +15,7 @@ enum AuthenticationStartScreenCoordinatorAction {
     case register
     case reportProblem
     case loginWithWallet
+    case loginWithAeternity
     
     case loginDirectlyWithOIDC(data: OIDCAuthorizationDataProxy, window: UIWindow)
     case loginDirectlyWithPassword(loginHint: String?)
@@ -28,6 +29,9 @@ enum AuthenticationStartScreenViewModelAction {
     case register
     case reportProblem
     case loginWithWallet
+    case loginWithAeternity
+    case submitAeternityAddress
+    case submitAeternitySignature
     
     case loginDirectlyWithOIDC(data: OIDCAuthorizationDataProxy, window: UIWindow)
     case loginDirectlyWithPassword(loginHint: String?)
@@ -58,6 +62,12 @@ struct AuthenticationStartScreenViewState: BindableState {
 
 struct AuthenticationStartScreenViewStateBindings {
     var alertInfo: AlertInfo<AuthenticationStartScreenAlertType>?
+    // Aeternity (Superhero)
+    var aeShowAddressSheet = false
+    var aeAddress = ""
+    var aeShowSignatureSheet = false
+    var aeSignature = ""
+    var aeMessageToSign = ""
 }
 
 enum AuthenticationStartScreenAlertType {
@@ -73,4 +83,7 @@ enum AuthenticationStartScreenViewAction {
     case register
     case reportProblem
     case loginWithWallet
+    case loginWithAeternity
+    case submitAeternityAddress
+    case submitAeternitySignature
 }

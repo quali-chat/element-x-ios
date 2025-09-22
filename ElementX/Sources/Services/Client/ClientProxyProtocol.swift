@@ -73,12 +73,14 @@ enum TimelineMediaVisibility: Decodable {
 }
 
 // sourcery: AutoMockable
-protocol ClientProxyProtocol: AnyObject, MediaLoaderProtocol {
+protocol ClientProxyProtocol: AnyObject {
     var actionsPublisher: AnyPublisher<ClientProxyAction, Never> { get }
     
     var loadingStatePublisher: CurrentValuePublisher<ClientProxyLoadingState, Never> { get }
     
     var verificationStatePublisher: CurrentValuePublisher<SessionVerificationState, Never> { get }
+    
+    var homeserverReachabilityPublisher: CurrentValuePublisher<NetworkMonitorReachability, Never> { get }
     
     var userID: String { get }
 
@@ -102,6 +104,8 @@ protocol ClientProxyProtocol: AnyObject, MediaLoaderProtocol {
     var hideInviteAvatarsPublisher: CurrentValuePublisher<Bool, Never> { get }
     
     var pusherNotificationClientIdentifier: String? { get }
+    
+    var mediaLoader: MediaLoaderProtocol { get }
     
     var roomSummaryProvider: RoomSummaryProviderProtocol { get }
     
@@ -136,6 +140,8 @@ protocol ClientProxyProtocol: AnyObject, MediaLoaderProtocol {
     func stopSync()
     
     func stopSync(completion: (() -> Void)?) // Hopefully this will become async once we get SE-0371.
+    
+    func expireSyncSessions() async
         
     func accountURL(action: AccountManagementAction) async -> URL?
     
@@ -158,6 +164,8 @@ protocol ClientProxyProtocol: AnyObject, MediaLoaderProtocol {
     func knockRoom(_ roomID: String, via: [String], message: String?) async -> Result<Void, ClientProxyError>
     
     func knockRoomAlias(_ roomAlias: String, message: String?) async -> Result<Void, ClientProxyError>
+    
+    func canJoinRoom(with rules: [AllowRule]) -> Bool
     
     func uploadMedia(_ media: MediaInfo) async -> Result<String, ClientProxyError>
     

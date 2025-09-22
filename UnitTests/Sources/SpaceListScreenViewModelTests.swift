@@ -52,7 +52,7 @@ class SpaceListScreenViewModelTests: XCTestCase {
         let action = try await deferred.fulfill()
         
         switch action {
-        case .selectSpace(let spaceRoomListProxy) where spaceRoomListProxy.spaceRoom.id == selectedSpace.id:
+        case .selectSpace(let spaceRoomListProxy) where spaceRoomListProxy.spaceRoomProxy.id == selectedSpace.id:
             break
         default:
             XCTFail("The action should select the space.")
@@ -76,7 +76,7 @@ class SpaceListScreenViewModelTests: XCTestCase {
         clientProxy.spaceService = spaceServiceProxy
         
         viewModel = SpaceListScreenViewModel(userSession: userSession,
-                                             selectedSpaceSubject: .init(nil),
+                                             selectedSpacePublisher: .init(nil),
                                              userIndicatorController: UserIndicatorControllerMock())
     }
 }

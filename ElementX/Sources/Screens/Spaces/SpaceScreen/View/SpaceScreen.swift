@@ -19,16 +19,18 @@ struct SpaceScreen: View {
                 rooms
             }
         }
-        .navigationTitle(context.viewState.space.name ?? L10n.commonSpace)
-        .navigationBarTitleDisplayMode(.inline)
         .background(Color.compound.bgCanvasDefault.ignoresSafeArea())
+        .navigationTitle(context.viewState.spaceName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbar }
     }
     
     @ViewBuilder
     var rooms: some View {
         ForEach(context.viewState.rooms, id: \.id) { spaceRoomProxy in
             SpaceRoomCell(spaceRoomProxy: spaceRoomProxy,
-                          isSelected: false,
+                          isSelected: spaceRoomProxy.id == context.viewState.selectedSpaceRoomID,
+                          isJoining: context.viewState.joiningRoomIDs.contains(spaceRoomProxy.id),
                           mediaProvider: context.mediaProvider) { action in
                 context.send(viewAction: .spaceAction(action))
             }
@@ -37,6 +39,16 @@ struct SpaceScreen: View {
         if context.viewState.isPaginating {
             ProgressView()
                 .padding()
+        }
+    }
+    
+    var toolbar: some ToolbarContent {
+        // Use the same trick as the RoomScreen for a leading title view that
+        // also hides the navigation title.
+        ToolbarItem(placement: .principal) {
+            RoomHeaderView(roomName: context.viewState.spaceName,
+                           roomAvatar: context.viewState.space.avatar,
+                           mediaProvider: context.mediaProvider)
         }
     }
 }
@@ -64,9 +76,10 @@ struct SpaceScreen_Previews: PreviewProvider, TestablePreview {
         let spaceRoomListProxy = SpaceRoomListProxyMock(.init(spaceRoomProxy: spaceRoomProxy,
                                                               initialSpaceRooms: .mockSpaceList))
         
-        let viewModel = SpaceScreenViewModel(spaceRoomList: spaceRoomListProxy,
+        let viewModel = SpaceScreenViewModel(spaceRoomListProxy: spaceRoomListProxy,
                                              spaceServiceProxy: SpaceServiceProxyMock(.init()),
-                                             mediaProvider: MediaProviderMock(configuration: .init()),
+                                             selectedSpaceRoomPublisher: .init(nil),
+                                             userSession: UserSessionMock(.init()),
                                              userIndicatorController: UserIndicatorControllerMock())
         return viewModel
     }

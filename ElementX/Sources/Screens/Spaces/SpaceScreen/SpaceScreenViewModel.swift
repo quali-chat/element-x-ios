@@ -12,6 +12,7 @@ typealias SpaceScreenViewModelType = StateStoreViewModelV2<SpaceScreenViewState,
 
 class SpaceScreenViewModel: SpaceScreenViewModelType, SpaceScreenViewModelProtocol {
     private let spaceServiceProxy: SpaceServiceProxyProtocol
+    private let clientProxy: ClientProxyProtocol
     private let userIndicatorController: UserIndicatorControllerProtocol
     
     private let actionsSubject: PassthroughSubject<SpaceScreenViewModelAction, Never> = .init()
@@ -19,34 +20,43 @@ class SpaceScreenViewModel: SpaceScreenViewModelType, SpaceScreenViewModelProtoc
         actionsSubject.eraseToAnyPublisher()
     }
 
-    init(spaceRoomList: SpaceRoomListProxyProtocol,
+    init(spaceRoomListProxy: SpaceRoomListProxyProtocol,
          spaceServiceProxy: SpaceServiceProxyProtocol,
-         mediaProvider: MediaProviderProtocol,
+         selectedSpaceRoomPublisher: CurrentValuePublisher<String?, Never>,
+         userSession: UserSessionProtocol,
          userIndicatorController: UserIndicatorControllerProtocol) {
         self.spaceServiceProxy = spaceServiceProxy
+        clientProxy = userSession.clientProxy
         self.userIndicatorController = userIndicatorController
         
-        super.init(initialViewState: SpaceScreenViewState(space: spaceRoomList.spaceRoom,
-                                                          rooms: spaceRoomList.spaceRoomsPublisher.value),
-                   mediaProvider: mediaProvider)
+        super.init(initialViewState: SpaceScreenViewState(space: spaceRoomListProxy.spaceRoomProxy,
+                                                          rooms: spaceRoomListProxy.spaceRoomsPublisher.value,
+                                                          selectedSpaceRoomID: selectedSpaceRoomPublisher.value),
+                   mediaProvider: userSession.mediaProvider)
         
-        spaceRoomList.spaceRoomsPublisher
+        spaceRoomListProxy.spaceRoomsPublisher
             .receive(on: DispatchQueue.main)
             .weakAssign(to: \.state.rooms, on: self)
             .store(in: &cancellables)
         
-        spaceRoomList.paginationStatePublisher
+        // As the server is slow, we just let the screen automatically paginate everything in. We can
+        // switch this to use the scroll position once Synapse receives some performance improvements.
+        spaceRoomListProxy.paginationStatePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] paginationState in
                 switch paginationState {
                 case .idle(let endReached):
                     self?.state.isPaginating = false
                     guard !endReached else { return }
-                    Task { await spaceRoomList.paginate() }
+                    Task { await spaceRoomListProxy.paginate() }
                 case .loading:
                     self?.state.isPaginating = true
                 }
             }
+            .store(in: &cancellables)
+        
+        selectedSpaceRoomPublisher
+            .weakAssign(to: \.state.selectedSpaceRoomID, on: self)
             .store(in: &cancellables)
     }
     
@@ -60,11 +70,17 @@ class SpaceScreenViewModel: SpaceScreenViewModelType, SpaceScreenViewModelProtoc
             if spaceRoomProxy.isSpace {
                 Task { await selectSpace(spaceRoomProxy) }
             } else {
-                #warning("Implement room flow")
+                // No need to check the join state, the room flow will show an appropriately configured join screen if needed.
+                actionsSubject.send(.selectRoom(roomID: spaceRoomProxy.id))
             }
-        case .spaceAction(.join(let spaceID)):
-            #warning("Implement joining.")
+        case .spaceAction(.join(let spaceRoomProxy)):
+            Task { await join(spaceRoomProxy) }
         }
+    }
+    
+    func stop() {
+        // If we pop this screen with running join operations, we don't want them to do anything.
+        state.joiningRoomIDs.removeAll()
     }
     
     // MARK: - Private
@@ -76,6 +92,25 @@ class SpaceScreenViewModel: SpaceScreenViewModelType, SpaceScreenViewModelProtoc
         case .failure(let error):
             MXLog.error("Unable to select space: \(error)")
             showFailureIndicator()
+        }
+    }
+    
+    private func join(_ spaceRoomProxy: SpaceRoomProxyProtocol) async {
+        state.joiningRoomIDs.insert(spaceRoomProxy.id)
+        defer { state.joiningRoomIDs.remove(spaceRoomProxy.id) }
+        
+        guard case .success = await clientProxy.joinRoom(spaceRoomProxy.id, via: []) else {
+            showFailureIndicator()
+            return
+        }
+        
+        // If multiple join operations are running, then only show the last one.
+        guard state.joiningRoomIDs == [spaceRoomProxy.id] else { return }
+        
+        if spaceRoomProxy.isSpace {
+            await selectSpace(spaceRoomProxy)
+        } else {
+            actionsSubject.send(.selectRoom(roomID: spaceRoomProxy.id))
         }
     }
     

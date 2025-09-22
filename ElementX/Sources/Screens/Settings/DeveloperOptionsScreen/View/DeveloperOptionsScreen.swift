@@ -36,8 +36,13 @@ struct DeveloperOptionsScreen: View {
                 Toggle(isOn: $context.threadsEnabled) {
                     Text("Threads")
                 }
+
                 Toggle(isOn: $context.spacesEnabled) {
                     Text("Spaces")
+                }
+                
+                Toggle(isOn: $context.nextGenHTMLParserEnabled) {
+                    Text("Next gen HTML parsing")
                 }
             }
             
@@ -118,13 +123,6 @@ struct DeveloperOptionsScreen: View {
                     Text("🥳")
                         .frame(maxWidth: .infinity)
                         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 } // Fix separator alignment
-                }
-                
-                Button {
-                    fatalError("This crash is a test.")
-                } label: {
-                    Text("💥")
-                        .frame(maxWidth: .infinity)
                 }
             }
 

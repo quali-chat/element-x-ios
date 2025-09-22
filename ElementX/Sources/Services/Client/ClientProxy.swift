@@ -17,7 +17,7 @@ class ClientProxy: ClientProxyProtocol {
     private let networkMonitor: NetworkMonitorProtocol
     private let appSettings: AppSettings
     
-    private let mediaLoader: MediaLoaderProtocol
+    let mediaLoader: MediaLoaderProtocol
     private let clientQueue: DispatchQueue
     
     private var roomListService: RoomListService
@@ -137,6 +137,11 @@ class ClientProxy: ClientProxyProtocol {
         verificationStateSubject.asCurrentValuePublisher()
     }
     
+    private let homeserverReachabilitySubject = CurrentValueSubject<NetworkMonitorReachability, Never>(.reachable)
+    var homeserverReachabilityPublisher: CurrentValuePublisher<NetworkMonitorReachability, Never> {
+        homeserverReachabilitySubject.asCurrentValuePublisher()
+    }
+    
     private let timelineMediaVisibilitySubject = CurrentValueSubject<TimelineMediaVisibility, Never>(.always)
     var timelineMediaVisibilityPublisher: CurrentValuePublisher<TimelineMediaVisibility, Never> {
         timelineMediaVisibilitySubject.asCurrentValuePublisher()
@@ -166,9 +171,7 @@ class ClientProxy: ClientProxyProtocol {
         
         secureBackupController = SecureBackupController(encryption: client.encryption())
         
-        // Temporarily using the mock until the SDK is updated.
-        // spaceService = SpaceServiceProxy(spaceService: client.spaceService())
-        spaceService = SpaceServiceProxyMock(.init())
+        spaceService = SpaceServiceProxy(spaceService: client.spaceService())
         
         let configuredAppService = try await ClientProxyServices(client: client,
                                                                  actionsSubject: actionsSubject,
@@ -220,10 +223,10 @@ class ClientProxy: ClientProxyProtocol {
         })
         
         sendQueueStatusSubject
-            .combineLatest(networkMonitor.reachabilityPublisher)
+            .combineLatest(homeserverReachabilityPublisher)
             .debounce(for: 1.0, scheduler: DispatchQueue.main)
             .sink { enabled, reachability in
-                MXLog.info("Send queue status changed to enabled: \(enabled), reachability: \(reachability)")
+                MXLog.info("Send queue status changed to enabled: \(enabled), homeserver reachability: \(reachability)")
                 
                 if enabled == false, reachability == .reachable {
                     MXLog.info("Enabling all send queues")
@@ -407,6 +410,10 @@ class ClientProxy: ClientProxyProtocol {
         }
     }
     
+    func expireSyncSessions() async {
+        await syncService.expireSessions()
+    }
+    
     func accountURL(action: AccountManagementAction) async -> URL? {
         try? await client.accountUrl(action: action).flatMap(URL.init(string:))
     }
@@ -533,6 +540,17 @@ class ClientProxy: ClientProxyProtocol {
             MXLog.error("Failed knocking roomAlias: \(roomAlias) with error: \(error)")
             return .failure(.sdkError(error))
         }
+    }
+    
+    func canJoinRoom(with rules: [AllowRule]) -> Bool {
+        for rule in rules {
+            if case let .roomMembership(roomID) = rule,
+               let room = try? client.getRoom(roomId: roomID),
+               room.membership() == .joined {
+                return true
+            }
+        }
+        return false
     }
     
     func uploadMedia(_ media: MediaInfo) async -> Result<String, ClientProxyError> {
@@ -928,12 +946,11 @@ class ClientProxy: ClientProxyProtocol {
             
             switch state {
             case .running, .terminated, .idle:
-                break
+                homeserverReachabilitySubject.send(.reachable)
+            case .offline:
+                homeserverReachabilitySubject.send(.unreachable)
             case .error:
                 restartSync()
-            case .offline:
-                // This needs to be enabled in the client builder first to be actually used
-                break
             }
         })
     }
@@ -1115,20 +1132,6 @@ class ClientProxy: ClientProxyProtocol {
     }
 }
 
-extension ClientProxy: MediaLoaderProtocol {
-    func loadMediaContentForSource(_ source: MediaSourceProxy) async throws -> Data {
-        try await mediaLoader.loadMediaContentForSource(source)
-    }
-
-    func loadMediaThumbnailForSource(_ source: MediaSourceProxy, width: UInt, height: UInt) async throws -> Data {
-        try await mediaLoader.loadMediaThumbnailForSource(source, width: width, height: height)
-    }
-    
-    func loadMediaFileForSource(_ source: MediaSourceProxy, filename: String?) async throws -> MediaFileHandleProxy {
-        try await mediaLoader.loadMediaFileForSource(source, filename: filename)
-    }
-}
-
 private class ClientDelegateWrapper: ClientDelegate {
     private let authErrorCallback: (Bool) -> Void
     
@@ -1198,6 +1201,7 @@ private struct ClientProxyServices {
         let syncService = try await client
             .syncService()
             .withCrossProcessLock()
+            .withOfflineMode()
             .withSharePos(enable: true)
             .finish()
         

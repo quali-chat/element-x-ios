@@ -23,11 +23,13 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
     private let appSettings: AppSettings
     private let appDelegate: AppDelegate
     private let appHooks: AppHooks
+    private let bugReportService: BugReportServiceProtocol
     private let elementCallService: ElementCallServiceProtocol
 
     /// Common background task to continue long-running tasks in the background.
     private var backgroundTask: UIBackgroundTaskIdentifier?
     
+    private var userSessionMigrationsOldVersion: Version?
     private var userSession: UserSessionProtocol? {
         didSet {
             userSessionObserver?.cancel()
@@ -36,7 +38,6 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
                 configureNotificationManager()
                 observeUserSessionChanges()
                 startSync()
-                performSettingsToAccountDataMigration(userSession: userSession)
                 Task { await appHooks.configure(with: userSession) }
             }
         }
@@ -115,8 +116,13 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         notificationManager = NotificationManager(notificationCenter: UNUserNotificationCenter.current(),
                                                   appSettings: appSettings)
         
+        bugReportService = BugReportService(rageshakeURLPublisher: appSettings.bugReportRageshakeURL.publisher,
+                                            applicationID: appSettings.bugReportApplicationID,
+                                            sdkGitSHA: sdkGitSha(),
+                                            maxUploadSize: appSettings.bugReportMaxUploadSize,
+                                            appHooks: appHooks)
         Self.setupServiceLocator(appSettings: appSettings, appHooks: appHooks)
-        Self.setupSentry(appSettings: appSettings)
+        Self.setupSentry(bugReportService: bugReportService, appSettings: appSettings)
         
         ServiceLocator.shared.analytics.signpost.start()
         ServiceLocator.shared.analytics.startIfEnabled()
@@ -144,15 +150,20 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         setupStateMachine()
 
         observeApplicationState()
-        observeNetworkState()
         observeAppLockChanges()
         
         registerBackgroundAppRefresh()
         
         appSettings.$analyticsConsentState
             .dropFirst() // Called above before configuring the ServiceLocator
-            .sink { _ in
-                Self.setupSentry(appSettings: appSettings)
+            .sink { [bugReportService] _ in
+                Self.setupSentry(bugReportService: bugReportService, appSettings: appSettings)
+            }
+            .store(in: &cancellables)
+        
+        appSettings.$nextGenHTMLParserEnabled
+            .sink { value in
+                AttributedStringBuilder.useNextGenHTMLParser = value
             }
             .store(in: &cancellables)
         
@@ -375,11 +386,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
     private static func setupServiceLocator(appSettings: AppSettings, appHooks: AppHooks) {
         ServiceLocator.shared.register(userIndicatorController: UserIndicatorController())
         ServiceLocator.shared.register(appSettings: appSettings)
-        ServiceLocator.shared.register(bugReportService: BugReportService(rageshakeURLPublisher: appSettings.bugReportRageshakeURL.publisher,
-                                                                          applicationID: appSettings.bugReportApplicationID,
-                                                                          sdkGitSHA: sdkGitSha(),
-                                                                          maxUploadSize: appSettings.bugReportMaxUploadSize,
-                                                                          appHooks: appHooks))
+        
         let posthogAnalyticsClient = PostHogAnalyticsClient()
         posthogAnalyticsClient.updateSuperProperties(AnalyticsEvent.SuperProperties(appPlatform: .EXI, cryptoSDK: .Rust, cryptoSDKVersion: sdkGitSha()))
         ServiceLocator.shared.register(analytics: AnalyticsService(client: posthogAnalyticsClient,
@@ -409,6 +416,27 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
             Tracing.migrateLogFiles()
             MXLog.info("Migrating to version 25.07.4, log files have been moved.")
         }
+        
+        // Store the old version to run additional migrations on the user session once it has been set up.
+        userSessionMigrationsOldVersion = oldVersion
+    }
+    
+    private func performUserSessionMigrations(_ userSession: UserSessionProtocol) async {
+        guard let oldVersion = userSessionMigrationsOldVersion else { return }
+        
+        MXLog.info("Migrating user session from \(oldVersion)")
+        
+        if oldVersion < Version(25, 6, 0) {
+            MXLog.info("Migrating to version 25.06.0, migrating timeline media settings to account data.")
+            performSettingsToAccountDataMigration(userSession: userSession)
+        }
+        
+        if oldVersion < Version(25, 9, 2) {
+            MXLog.info("Migrating to version 25.09.2, triggering sync to ensure m.space state is up to date.")
+            await userSession.clientProxy.expireSyncSessions()
+        }
+        
+        userSessionMigrationsOldVersion = nil
     }
     
     // This could be removed once the adoption of 25.06.x is widespread.
@@ -539,6 +567,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         Task {
             switch await userSessionStore.restoreUserSession() {
             case .success(let userSession):
+                await self.performUserSessionMigrations(userSession)
                 self.userSession = userSession
                 stateMachine.processEvent(.createdUserSession)
             case .failure:
@@ -556,7 +585,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
                                                           appHooks: appHooks)
         
         let coordinator = AuthenticationFlowCoordinator(authenticationService: authenticationService,
-                                                        bugReportService: ServiceLocator.shared.bugReportService,
+                                                        bugReportService: bugReportService,
                                                         navigationRootCoordinator: navigationRootCoordinator,
                                                         appMediator: appMediator,
                                                         appSettings: appSettings,
@@ -612,6 +641,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
             let parameters = SoftLogoutScreenCoordinatorParameters(authenticationService: authenticationService,
                                                                    credentials: credentials,
                                                                    keyBackupNeeded: false,
+                                                                   appSettings: appSettings,
                                                                    userIndicatorController: ServiceLocator.shared.userIndicatorController)
             let coordinator = SoftLogoutScreenCoordinator(parameters: parameters)
             self.softLogoutCoordinator = coordinator
@@ -640,19 +670,23 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
             fatalError("User session not setup")
         }
         
-        let userSessionFlowCoordinator = UserSessionFlowCoordinator(userSession: userSession,
-                                                                    isNewLogin: isNewLogin,
+        let flowParameters = CommonFlowParameters(userSession: userSession,
+                                                  bugReportService: bugReportService,
+                                                  elementCallService: elementCallService,
+                                                  timelineControllerFactory: TimelineControllerFactory(),
+                                                  emojiProvider: EmojiProvider(appSettings: appSettings),
+                                                  appMediator: appMediator,
+                                                  appSettings: appSettings,
+                                                  appHooks: appHooks,
+                                                  analytics: ServiceLocator.shared.analytics,
+                                                  userIndicatorController: ServiceLocator.shared.userIndicatorController,
+                                                  notificationManager: notificationManager,
+                                                  stateMachineFactory: StateMachineFactory())
+        
+        let userSessionFlowCoordinator = UserSessionFlowCoordinator(isNewLogin: isNewLogin,
                                                                     navigationRootCoordinator: navigationRootCoordinator,
                                                                     appLockService: appLockFlowCoordinator.appLockService,
-                                                                    bugReportService: ServiceLocator.shared.bugReportService,
-                                                                    elementCallService: elementCallService,
-                                                                    timelineControllerFactory: TimelineControllerFactory(),
-                                                                    appMediator: appMediator,
-                                                                    appSettings: appSettings,
-                                                                    appHooks: appHooks,
-                                                                    analytics: ServiceLocator.shared.analytics,
-                                                                    notificationManager: notificationManager,
-                                                                    stateMachineFactory: StateMachineFactory())
+                                                                    flowParameters: flowParameters)
         
         userSessionFlowCoordinator.actionsPublisher
             .sink { [weak self] action in
@@ -765,7 +799,9 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         let callScreenCoordinator = CallScreenCoordinator(parameters: .init(elementCallService: elementCallService,
                                                                             configuration: configuration,
                                                                             allowPictureInPicture: false,
-                                                                            appHooks: appHooks))
+                                                                            appSettings: appSettings,
+                                                                            appHooks: appHooks,
+                                                                            analytics: ServiceLocator.shared.analytics))
         
         callScreenCoordinator.actions
             .sink { [weak self] action in
@@ -815,24 +851,6 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
                     stateMachine.processEvent(.signOut(isSoft: isSoftLogout, disableAppLock: false))
                 }
             }
-    }
-    
-    private func observeNetworkState() {
-        let reachabilityNotificationIdentifier = "io.element.elementx.reachability.notification"
-        appMediator.networkMonitor
-            .reachabilityPublisher
-            .sink { reachability in
-                MXLog.info("Reachability changed to \(reachability)")
-                
-                if reachability == .reachable {
-                    ServiceLocator.shared.userIndicatorController.retractIndicatorWithId(reachabilityNotificationIdentifier)
-                } else {
-                    ServiceLocator.shared.userIndicatorController.submitIndicator(.init(id: reachabilityNotificationIdentifier,
-                                                                                        title: L10n.commonOffline,
-                                                                                        persistent: true))
-                }
-            }
-            .store(in: &cancellables)
     }
     
     private func observeAppLockChanges() {
@@ -894,7 +912,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         }
     }
     
-    private static func setupSentry(appSettings: AppSettings) {
+    private static func setupSentry(bugReportService: BugReportServiceProtocol, appSettings: AppSettings) {
         guard let bugReportSentryURL = appSettings.bugReportSentryURL else { return }
         
         let options: Options = .init()
@@ -947,7 +965,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
         // multiple callbacks if there are multiple crash events to send (see method documentation)
         options.onCrashedLastRun = { event in
             MXLog.error("Sentry detected a crash in the previous run: \(event.eventId.sentryIdString)")
-            ServiceLocator.shared.bugReportService.lastCrashEventID = event.eventId.sentryIdString
+            bugReportService.lastCrashEventID = event.eventId.sentryIdString
         }
         
         SentrySDK.start(options: options) // Swift
@@ -1037,7 +1055,7 @@ class AppCoordinator: AppCoordinatorProtocol, AuthenticationFlowCoordinatorDeleg
                 
                 switch state {
                 case .loading:
-                    if self?.appMediator.networkMonitor.reachabilityPublisher.value == .reachable {
+                    if self?.userSession?.clientProxy.homeserverReachabilityPublisher.value == .reachable {
                         ServiceLocator.shared.userIndicatorController.submitIndicator(.init(id: toastIdentifier, type: .toast(progress: .indeterminate), title: L10n.commonSyncing, persistent: true))
                     }
                 case .notLoading:

@@ -9,18 +9,19 @@ import Combine
 import Foundation
 import SwiftState
 
-enum SpaceExplorerFlowCoordinatorAction: Equatable {
+enum SpaceExplorerFlowCoordinatorAction {
     case showSettings
+    case presentCallScreen(roomProxy: JoinedRoomProxyProtocol)
+    case verifyUser(userID: String)
 }
 
 class SpaceExplorerFlowCoordinator: FlowCoordinatorProtocol {
     private let userSession: UserSessionProtocol
     
+    private var flowParameters: CommonFlowParameters
     private let navigationSplitCoordinator: NavigationSplitCoordinator
     private let sidebarNavigationStackCoordinator: NavigationStackCoordinator
     private let detailNavigationStackCoordinator: NavigationStackCoordinator
-    
-    private let userIndicatorController: UserIndicatorControllerProtocol
     
     private var spaceFlowCoordinator: SpaceFlowCoordinator?
     
@@ -52,12 +53,10 @@ class SpaceExplorerFlowCoordinator: FlowCoordinatorProtocol {
         actionsSubject.eraseToAnyPublisher()
     }
     
-    init(userSession: UserSessionProtocol,
-         navigationSplitCoordinator: NavigationSplitCoordinator,
-         userIndicatorController: UserIndicatorControllerProtocol) {
-        self.userSession = userSession
+    init(navigationSplitCoordinator: NavigationSplitCoordinator, flowParameters: CommonFlowParameters) {
+        userSession = flowParameters.userSession
         self.navigationSplitCoordinator = navigationSplitCoordinator
-        self.userIndicatorController = userIndicatorController
+        self.flowParameters = flowParameters
         
         sidebarNavigationStackCoordinator = NavigationStackCoordinator(navigationSplitCoordinator: navigationSplitCoordinator)
         detailNavigationStackCoordinator = NavigationStackCoordinator(navigationSplitCoordinator: navigationSplitCoordinator)
@@ -94,7 +93,7 @@ class SpaceExplorerFlowCoordinator: FlowCoordinatorProtocol {
         stateMachine.addRouteMapping { event, fromState, userInfo in
             guard event == .selectSpace, case .spaceList = fromState else { return nil }
             guard let spaceRoomListProxy = userInfo as? SpaceRoomListProxyProtocol else { fatalError("A space proxy must be provided.") }
-            return .spaceList(selectedSpaceID: spaceRoomListProxy.spaceRoom.id)
+            return .spaceList(selectedSpaceID: spaceRoomListProxy.spaceRoomProxy.id)
         } handler: { [weak self] context in
             guard let self, let spaceRoomListProxy = context.userInfo as? SpaceRoomListProxyProtocol else { return }
             startSpaceFlow(spaceRoomListProxy: spaceRoomListProxy)
@@ -116,8 +115,8 @@ class SpaceExplorerFlowCoordinator: FlowCoordinatorProtocol {
     
     private func presentSpaceList() {
         let parameters = SpaceListScreenCoordinatorParameters(userSession: userSession,
-                                                              selectedSpaceSubject: selectedSpaceSubject.asCurrentValuePublisher(),
-                                                              userIndicatorController: userIndicatorController)
+                                                              selectedSpacePublisher: selectedSpaceSubject.asCurrentValuePublisher(),
+                                                              userIndicatorController: flowParameters.userIndicatorController)
         let coordinator = SpaceListScreenCoordinator(parameters: parameters)
         coordinator.actionsPublisher
             .sink { [weak self] action in
@@ -138,15 +137,18 @@ class SpaceExplorerFlowCoordinator: FlowCoordinatorProtocol {
         let coordinator = SpaceFlowCoordinator(spaceRoomListProxy: spaceRoomListProxy,
                                                spaceServiceProxy: userSession.clientProxy.spaceService,
                                                isChildFlow: false,
-                                               mediaProvider: userSession.mediaProvider,
                                                navigationStackCoordinator: detailNavigationStackCoordinator,
-                                               userIndicatorController: userIndicatorController)
+                                               flowParameters: flowParameters)
         
         coordinator.actionsPublisher
             .sink { [weak self] action in
                 guard let self else { return }
                 
                 switch action {
+                case .presentCallScreen(let roomProxy):
+                    actionsSubject.send(.presentCallScreen(roomProxy: roomProxy))
+                case .verifyUser(let userID):
+                    actionsSubject.send(.verifyUser(userID: userID))
                 case .finished:
                     stateMachine.tryEvent(.deselectSpace)
                 }
@@ -160,6 +162,6 @@ class SpaceExplorerFlowCoordinator: FlowCoordinatorProtocol {
         }
         
         coordinator.start()
-        selectedSpaceSubject.send(spaceRoomListProxy.spaceRoom.id)
+        selectedSpaceSubject.send(spaceRoomListProxy.spaceRoomProxy.id)
     }
 }

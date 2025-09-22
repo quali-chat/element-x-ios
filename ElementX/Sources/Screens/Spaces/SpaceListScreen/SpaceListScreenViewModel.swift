@@ -20,7 +20,7 @@ class SpaceListScreenViewModel: SpaceListScreenViewModelType, SpaceListScreenVie
     }
 
     init(userSession: UserSessionProtocol,
-         selectedSpaceSubject: CurrentValuePublisher<String?, Never>,
+         selectedSpacePublisher: CurrentValuePublisher<String?, Never>,
          userIndicatorController: UserIndicatorControllerProtocol) {
         spaceServiceProxy = userSession.clientProxy.spaceService
         self.userIndicatorController = userIndicatorController
@@ -35,7 +35,7 @@ class SpaceListScreenViewModel: SpaceListScreenViewModelType, SpaceListScreenVie
             .weakAssign(to: \.state.joinedSpaces, on: self)
             .store(in: &cancellables)
         
-        selectedSpaceSubject
+        selectedSpacePublisher
             .weakAssign(to: \.state.selectedSpaceID, on: self)
             .store(in: &cancellables)
         
@@ -58,7 +58,7 @@ class SpaceListScreenViewModel: SpaceListScreenViewModelType, SpaceListScreenVie
         switch viewAction {
         case .spaceAction(.select(let spaceRoomProxy)):
             Task { await selectSpace(spaceRoomProxy) }
-        case .spaceAction(.join(let spaceRoom)):
+        case .spaceAction(.join(let spaceRoomProxy)):
             #warning("Implement joining.")
         case .showSettings:
             actionsSubject.send(.showSettings)

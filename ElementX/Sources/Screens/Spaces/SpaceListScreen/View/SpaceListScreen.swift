@@ -58,9 +58,9 @@ struct SpaceListScreen: View {
     }
     
     var spaces: some View {
-        ForEach(context.viewState.joinedSpaces, id: \.id) { spaceRoom in
-            SpaceRoomCell(spaceRoomProxy: spaceRoom,
-                          isSelected: spaceRoom.id == context.viewState.selectedSpaceID,
+        ForEach(context.viewState.joinedSpaces, id: \.id) { spaceRoomProxy in
+            SpaceRoomCell(spaceRoomProxy: spaceRoomProxy,
+                          isSelected: spaceRoomProxy.id == context.viewState.selectedSpaceID,
                           mediaProvider: context.mediaProvider) { action in
                 context.send(viewAction: .spaceAction(action))
             }
@@ -107,7 +107,7 @@ struct SpaceListScreen_Previews: PreviewProvider, TestablePreview {
         clientProxy.spaceService = SpaceServiceProxyMock(.init(joinedSpaces: .mockJoinedSpaces))
         
         let viewModel = SpaceListScreenViewModel(userSession: UserSessionMock(.init(clientProxy: clientProxy)),
-                                                 selectedSpaceSubject: .init(nil),
+                                                 selectedSpacePublisher: .init(nil),
                                                  userIndicatorController: UserIndicatorControllerMock())
         
         return viewModel

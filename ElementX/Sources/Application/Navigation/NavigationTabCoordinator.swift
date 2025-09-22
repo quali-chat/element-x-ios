@@ -16,6 +16,7 @@ import SwiftUI
         var dismissalCallback: (() -> Void)?
     }
     
+    @MainActor
     @Observable class TabDetails {
         /// A unique tab that identifies the tab for selection.
         let tag: Tag
@@ -23,13 +24,29 @@ import SwiftUI
         let icon: KeyPath<CompoundIcons, Image>
         let selectedIcon: KeyPath<CompoundIcons, Image>
         var badgeCount = 0
-        var barVisibility: Visibility = .automatic
+        var barVisibilityOverride: Visibility?
+        
+        /// Provide the tab's split coordinator in here to have the tab bar automatically hidden
+        /// when pushing a child into the split view's details on iPhone/compact iPad.
+        weak var navigationSplitCoordinator: NavigationSplitCoordinator?
         
         init(tag: Tag, title: String, icon: KeyPath<CompoundIcons, Image>, selectedIcon: KeyPath<CompoundIcons, Image>) {
             self.tag = tag
             self.title = title
             self.icon = icon
             self.selectedIcon = selectedIcon
+        }
+        
+        func barVisibility(in horizontalSizeClass: UserInterfaceSizeClass?) -> Visibility {
+            if let barVisibilityOverride {
+                barVisibilityOverride
+            } else if horizontalSizeClass == .compact, navigationSplitCoordinator?.detailCoordinator != nil {
+                // Whilst we support pushing screens on the stack in the sidebarCoordinator, in practice
+                // we never do that, so simply checking that the detailCoordinator exists is enough.
+                .hidden
+            } else {
+                .automatic
+            }
         }
     }
     
@@ -173,6 +190,71 @@ import SwiftUI
         }
     }
     
+    // MARK: - Overlay
+    
+    fileprivate var overlayModule: NavigationModule? {
+        didSet {
+            if let oldValue {
+                logPresentationChange("Remove overlay", oldValue)
+                oldValue.tearDown()
+            }
+            
+            if let overlayModule {
+                logPresentationChange("Set overlay", overlayModule)
+                overlayModule.coordinator?.start()
+            }
+        }
+    }
+    
+    /// The currently displayed overlay coordinator
+    var overlayCoordinator: (any CoordinatorProtocol)? {
+        overlayModule?.coordinator
+    }
+    
+    enum OverlayPresentationMode { case fullScreen, minimized }
+    fileprivate var overlayPresentationMode: OverlayPresentationMode = .minimized
+    
+    /// Present an overlay on top of the tab view
+    /// - Parameters:
+    ///   - coordinator: the coordinator to display
+    ///   - presentationMode: how the coordinator should be presented
+    ///   - animated: whether the transition should be animated
+    ///   - dismissalCallback: called when the overlay has been dismissed, programatically or otherwise
+    func setOverlayCoordinator(_ coordinator: (any CoordinatorProtocol)?,
+                               presentationMode: OverlayPresentationMode = .fullScreen,
+                               animated: Bool = true,
+                               dismissalCallback: (() -> Void)? = nil) {
+        guard let coordinator else {
+            overlayModule = nil
+            return
+        }
+        
+        if overlayModule?.coordinator === coordinator {
+            fatalError("Cannot use the same coordinator more than once")
+        }
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = !animated
+
+        withTransaction(transaction) {
+            overlayPresentationMode = presentationMode
+            overlayModule = NavigationModule(coordinator, dismissalCallback: dismissalCallback)
+        }
+    }
+    
+    /// Updates the presentation of the overlay coordinator.
+    /// - Parameters:
+    ///   - mode: The type of presentation to use.
+    ///   - animated: whether the transition should be animated
+    func setOverlayPresentationMode(_ mode: OverlayPresentationMode, animated: Bool = true) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = !animated
+        
+        withTransaction(transaction) {
+            overlayPresentationMode = mode
+        }
+    }
+    
     // MARK: - CoordinatorProtocol
     
     /// No idea if this is particuarly needed for the TabView but we do this for the NavigationStackCoordinator and NavigationSplitCoordinator so it
@@ -202,6 +284,8 @@ import SwiftUI
 }
 
 private struct NavigationTabCoordinatorView<Tag: Hashable>: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    
     @Bindable var navigationTabCoordinator: NavigationTabCoordinator<Tag>
     
     @State private var standardAppearance = UITabBarAppearance()
@@ -220,7 +304,7 @@ private struct NavigationTabCoordinatorView<Tag: Hashable>: View {
                     }
                     .tag(module.details.tag)
                     .badge(module.details.badgeCount)
-                    .toolbar(module.details.barVisibility, for: .tabBar)
+                    .toolbar(module.details.barVisibility(in: horizontalSizeClass), for: .tabBar)
             }
         }
         .introspect(.tabView, on: .supportedVersions, customize: configureAppearance)
@@ -231,6 +315,18 @@ private struct NavigationTabCoordinatorView<Tag: Hashable>: View {
         .fullScreenCover(item: $navigationTabCoordinator.fullScreenCoverModule) { module in
             module.coordinator?.toPresentable()
                 .id(module.id)
+        }
+        .accessibilityHidden(navigationTabCoordinator.overlayModule?.coordinator != nil && navigationTabCoordinator.overlayPresentationMode == .fullScreen)
+        .overlay {
+            Group {
+                if let coordinator = navigationTabCoordinator.overlayModule?.coordinator {
+                    coordinator.toPresentable()
+                        .opacity(navigationTabCoordinator.overlayPresentationMode == .minimized ? 0 : 1)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.elementDefault, value: navigationTabCoordinator.overlayPresentationMode)
+            .animation(.elementDefault, value: navigationTabCoordinator.overlayModule)
         }
     }
     

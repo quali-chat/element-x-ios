@@ -12,6 +12,22 @@
 		</dict>
 		<dict>
 			<key>File</key>
+			<string>Packages/BigInt</string>
+			<key>Title</key>
+			<string>BigInt</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/CryptoSwift</string>
+			<key>Title</key>
+			<string>CryptoSwift</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
 			<string>Packages/DeviceKit</string>
 			<key>Title</key>
 			<string>DeviceKit</string>
@@ -116,14 +132,6 @@
 		</dict>
 		<dict>
 			<key>File</key>
-			<string>Packages/matrix-rust-components-swift</string>
-			<key>Title</key>
-			<string>matrix-rust-components-swift</string>
-			<key>Type</key>
-			<string>PSChildPaneSpecifier</string>
-		</dict>
-		<dict>
-			<key>File</key>
 			<string>Packages/ogg-swift</string>
 			<key>Title</key>
 			<string>ogg-swift</string>
@@ -148,6 +156,38 @@
 		</dict>
 		<dict>
 			<key>File</key>
+			<string>Packages/PromiseKit</string>
+			<key>Title</key>
+			<string>PromiseKit</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/QRCode</string>
+			<key>Title</key>
+			<string>QRCode</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/reown</string>
+			<key>Title</key>
+			<string>reown</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/secp256k1</string>
+			<key>Title</key>
+			<string>secp256k1</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
 			<string>Packages/sentry-cocoa</string>
 			<key>Title</key>
 			<string>sentry-cocoa</string>
@@ -164,9 +204,25 @@
 		</dict>
 		<dict>
 			<key>File</key>
+			<string>Packages/Starscream</string>
+			<key>Title</key>
+			<string>Starscream</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
 			<string>Packages/swift-algorithms</string>
 			<key>Title</key>
 			<string>swift-algorithms</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-asn1</string>
+			<key>Title</key>
+			<string>swift-asn1</string>
 			<key>Type</key>
 			<string>PSChildPaneSpecifier</string>
 		</dict>
@@ -180,9 +236,33 @@
 		</dict>
 		<dict>
 			<key>File</key>
+			<string>Packages/swift-atomics</string>
+			<key>Title</key>
+			<string>swift-atomics</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-certificates</string>
+			<key>Title</key>
+			<string>swift-certificates</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
 			<string>Packages/swift-collections</string>
 			<key>Title</key>
 			<string>swift-collections</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-crypto</string>
+			<key>Title</key>
+			<string>swift-crypto</string>
 			<key>Type</key>
 			<string>PSChildPaneSpecifier</string>
 		</dict>
@@ -196,9 +276,73 @@
 		</dict>
 		<dict>
 			<key>File</key>
+			<string>Packages/swift-http-structured-headers</string>
+			<key>Title</key>
+			<string>swift-http-structured-headers</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-http-types</string>
+			<key>Title</key>
+			<string>swift-http-types</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-log</string>
+			<key>Title</key>
+			<string>swift-log</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
 			<string>Packages/swift-mutex</string>
 			<key>Title</key>
 			<string>swift-mutex</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-nio</string>
+			<key>Title</key>
+			<string>swift-nio</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-nio-extras</string>
+			<key>Title</key>
+			<string>swift-nio-extras</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-nio-http2</string>
+			<key>Title</key>
+			<string>swift-nio-http2</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-nio-ssl</string>
+			<key>Title</key>
+			<string>swift-nio-ssl</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-nio-transport-services</string>
+			<key>Title</key>
+			<string>swift-nio-transport-services</string>
 			<key>Type</key>
 			<string>PSChildPaneSpecifier</string>
 		</dict>
@@ -220,6 +364,22 @@
 		</dict>
 		<dict>
 			<key>File</key>
+			<string>Packages/swift-qrcode-generator</string>
+			<key>Title</key>
+			<string>swift-qrcode-generator</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-service-lifecycle</string>
+			<key>Title</key>
+			<string>swift-service-lifecycle</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
 			<string>Packages/swift-snapshot-testing</string>
 			<key>Title</key>
 			<string>swift-snapshot-testing</string>
@@ -231,6 +391,22 @@
 			<string>Packages/swift-syntax</string>
 			<key>Title</key>
 			<string>swift-syntax</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/swift-system</string>
+			<key>Title</key>
+			<string>swift-system</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/SwiftImageReadWrite</string>
+			<key>Title</key>
+			<string>SwiftImageReadWrite</string>
 			<key>Type</key>
 			<string>PSChildPaneSpecifier</string>
 		</dict>
@@ -260,9 +436,41 @@
 		</dict>
 		<dict>
 			<key>File</key>
+			<string>Packages/CoinbaseWalletSDK</string>
+			<key>Title</key>
+			<string>CoinbaseWalletSDK</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/Web3</string>
+			<key>Title</key>
+			<string>Web3</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/websocket-kit</string>
+			<key>Title</key>
+			<string>websocket-kit</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
 			<string>Packages/xctest-dynamic-overlay</string>
 			<key>Title</key>
 			<string>xctest-dynamic-overlay</string>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+		</dict>
+		<dict>
+			<key>File</key>
+			<string>Packages/Yttrium</string>
+			<key>Title</key>
+			<string>Yttrium</string>
 			<key>Type</key>
 			<string>PSChildPaneSpecifier</string>
 		</dict>

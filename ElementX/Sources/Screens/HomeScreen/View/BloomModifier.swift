@@ -12,7 +12,11 @@ import SwiftUIIntrospect
 extension View {
     @ViewBuilder
     func bloom() -> some View {
+        #if QUALICHAT
+        self
+        #else
         modifier(BloomModifier())
+        #endif
     }
 }
 

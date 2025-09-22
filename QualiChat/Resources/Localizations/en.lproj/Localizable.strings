@@ -261,7 +261,7 @@
 "common_rich_text_editor" = "Rich text editor";
 "common_room" = "Room";
 "common_room_name" = "Room name";
-"common_room_name_placeholder" = "e.g. your project name";
+"common_room_name_placeholder" = "Room name";
 "common_saved_changes" = "Saved changes";
 "common_saving" = "Saving";
 "common_screen_lock" = "Screen lock";

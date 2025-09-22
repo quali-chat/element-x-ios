@@ -43,8 +43,6 @@ final class AuthenticationStartScreenCoordinator: CoordinatorProtocol {
                 switch action {
                 case .loginWithQR:
                     actionsSubject.send(.loginWithQR)
-                case .loginWithWallet:
-                    actionsSubject.send(.loginWithWallet)
                 case .login:
                     actionsSubject.send(.login)
                 case .register:

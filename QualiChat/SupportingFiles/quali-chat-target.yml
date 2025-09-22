@@ -255,14 +255,6 @@ targets:
     - package: SwiftOGG
     - package: DSWaveformImage
       product: DSWaveformImageViews
-    - package: ReownSwift
-      product: ReownAppKit
-    - package: Starscream
-      product: Starscream
-    - package: CryptoSwift
-      product: CryptoSwift
-    - package: Web3
-      product: Web3
 
     sources:
     - path: ../../ElementX/Sources

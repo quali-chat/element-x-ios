@@ -62,8 +62,7 @@ include:
 - path: NSE/SupportingFiles/target.yml
 - path: ShareExtension/SupportingFiles/target.yml
 - path: AccessibilityTests/SupportingFiles/target.yml
-- path: QualiChat/SupportingFiles/target.yml
-# - path: MyAppVariant/override.yml
+- path: QualiChat/SupportingFiles/quali-chat-target.yml
 
 packages:
   # Element/Matrix dependencies
